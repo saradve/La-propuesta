@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cámara con Filtro + ❓</title>
+<style>
+  :root{
+    --bg: #14121a;
+    --panel: #1e1b26;
+    --accent: #a78bfa;
+    --accent2: #f472b6;
+    --text: #f1eefc;
+    --muted: #9c94ad;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background: radial-gradient(circle at 20% 0%, #241f30 0%, var(--bg) 60%);
+    color:var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:24px 16px 60px;
+  }
+  h1{
+    font-size:1.5rem;
+    margin:8px 0 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-align:center;
+  }
+  p.subtitle{
+    color:var(--muted);
+    font-size:0.9rem;
+    margin:0 0 24px;
+    text-align:center;
+    max-width:480px;
+  }
+  .stage{
+    position:relative;
+    width:min(92vw, 480px);
+    aspect-ratio:4/3;
+    background:#000;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  video, canvas{
+    position:absolute;
+    top:0;left:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  video{ transform: scaleX(-1); }
+  canvas#output{ display:none; }
+  .qmark{
+    position:absolute;
+    font-size:64px;
+    font-weight:900;
+    color:#fff;
+    text-shadow: 0 0 12px rgba(0,0,0,0.7), 0 0 4px var(--accent2);
+    cursor: grab;
+    user-select:none;
+    transform: translate(-50%, -100%) rotate(-6deg);
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+    touch-action:none;
+    display:none;
+    line-height:1;
+  }
+  .qmark.active{ display:block; }
+  .qmark:active{ cursor: grabbing; }
+
+  .controls{
+    width:min(92vw, 480px);
+    margin-top:18px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  button{
+    border:none;
+    border-radius:12px;
+    padding:12px 18px;
+    font-size:0.95rem;
+    font-weight:600;
+    cursor:pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    color:#fff;
+  }
+  button:active{ transform: scale(0.96); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+  .btn-primary{
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 6px 18px rgba(167,139,250,0.35);
+  }
+  .btn-secondary{
+    background: var(--panel);
+    border:1px solid rgba(255,255,255,0.1);
+  }
+  .btn-danger{
+    background: #3a1f24;
+    border:1px solid #7a2e3a;
+  }
+
+  .panel{
+    background: var(--panel);
+    border-radius:14px;
+    padding:14px 16px;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .panel-title{
+    font-size:0.8rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  .filters{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding-bottom:4px;
+  }
+  .filter-chip{
+    flex:0 0 auto;
+    padding:8px 14px;
+    border-radius:999px;
+    background:#2a2635;
+    border:1px solid transparent;
+    color:var(--text);
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .filter-chip.selected{
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(167,139,250,0.25), rgba(244,114,182,0.25));
+  }
+  .status{
+    text-align:center;
+    font-size:0.82rem;
+    color:var(--muted);
+    min-height:18px;
+  }
+  .hint{
+    text-align:center;
+    font-size:0.78rem;
+    color:var(--muted);
+    max-width:420px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>📸 Cámara con filtro + ❓</h1>
+  <p class="subtitle">Toma una foto, aplícale un filtro y coloca (o deja que se detecte) un signo de interrogación arriba de la cabeza.</p>
+
+  <div class="stage" id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="output"></canvas>
+    <div class="qmark" id="qmark">❓</div>
+  </div>
+
+  <div class="controls">
+
+    <div class="panel">
+      <div class="panel-title">Filtro</div>
+      <div class="filters" id="filters">
+        <div class="filter-chip selected" data-filter="none">Normal</div>
+        <div class="filter-chip" data-filter="grayscale(1) contrast(1.1)">Blanco y negro</div>
+        <div class="filter-chip" data-filter="sepia(0.7) contrast(1.05) saturate(1.2)">Vintage</div>
+        <div class="filter-chip" data-filter="saturate(1.8) contrast(1.15)">Vívido</div>
+        <div class="filter-chip" data-filter="contrast(1.3) brightness(1.1) hue-rotate(-10deg)">Frío</div>
+        <div class="filter-chip" data-filter="sepia(0.3) saturate(1.4) hue-rotate(-20deg) brightness(1.05)">Cálido</div>
+        <div class="filter-chip" data-filter="invert(1)">Invertido</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn-primary" id="captureBtn">📷 Tomar foto</button>
+      <button class="btn-secondary" id="retakeBtn" disabled>🔁 Repetir</button>
+      <button class="btn-secondary" id="downloadBtn" disabled>⬇️ Descargar</button>
+      <button class="btn-danger" id="switchBtn">🔄 Cambiar cámara</button>
+    </div>
+
+    <div class="status" id="status">Iniciando cámara…</div>
+    <p class="hint">Si la detección automática de rostro no está disponible en tu navegador, el signo ❓ se coloca en una posición estimada: puedes arrastrarlo con el dedo o el mouse para ajustarlo.</p>
+  </div>
+
+<script>
+const video = document.getElementById('video');
+const output = document.getElementById('output');
+const stage = document.getElementById('stage');
+const qmark = document.getElementById('qmark');
+const captureBtn = document.getElementById('captureBtn');
+const retakeBtn = document.getElementById('retakeBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const switchBtn = document.getElementById('switchBtn');
+const status = document.getElementById('status');
+const filterChips = document.querySelectorAll('.filter-chip');
+
+let currentStream = null;
+let facingMode = 'user';
+let selectedFilter = 'none';
+let captured = false;
+let ctx = output.getContext('2d');
+let lastFacePos = null; // {x,y,w,h} in canvas coords
+
+function setStatus(msg){ status.textContent = msg; }
+
+async function startCamera(){
+  setStatus('Iniciando cámara…');
+  if(currentStream){
+    currentStream.getTracks().forEach(t => t.stop());
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode, width:{ideal:1280}, height:{ideal:960} },
+      audio:false
+    });
+    currentStream = stream;
+    video.srcObject = stream;
+    await video.play();
+    setStatus('Cámara lista. Toma tu foto.');
+  }catch(err){
+    setStatus('No se pudo acceder a la cámara: ' + err.message);
+  }
+}
+
+filterChips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    filterChips.forEach(c => c.classList.remove('selected'));
+    chip.classList.add('selected');
+    selectedFilter = chip.dataset.filter;
+    if(captured) redrawWithFilter();
+  });
+});
+
+switchBtn.addEventListener('click', () => {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  startCamera();
+});
+
+captureBtn.addEventListener('click', async () => {
+  captureBtn.disabled = true;
+  setStatus('Procesando…');
+
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  output.width = w;
+  output.height = h;
+
+  // Draw mirrored (to match preview) frame to canvas
+  ctx.save();
+  ctx.translate(w,0);
+  ctx.scale(-1,1);
+  ctx.filter = selectedFilter === 'none' ? 'none' : selectedFilter;
+  ctx.drawImage(video, 0, 0, w, h);
+  ctx.restore();
+
+  video.style.display = 'none';
+  output.style.display = 'block';
+  captured = true;
+
+  // Try face detection
+  await placeQuestionMark(w, h);
+
+  captureBtn.disabled = false;
+  retakeBtn.disabled = false;
+  downloadBtn.disabled = false;
+  setStatus('¡Listo! Puedes arrastrar el ❓ o cambiar el filtro.');
+});
+
+function redrawWithFilter(){
+  // Re-render from video is not possible after capture (video hidden),
+  // so we keep the original captured pixels by re-capturing filter via CSS on canvas element instead.
+  output.style.filter = selectedFilter === 'none' ? 'none' : selectedFilter;
+}
+
+async function placeQuestionMark(w, h){
+  let box = null;
+
+  if('FaceDetector' in window){
+    try{
+      const detector = new FaceDetector({ fastMode:true, maxDetectedFaces:1 });
+      const faces = await detector.detect(output);
+      if(faces && faces.length > 0){
+        const bb = faces[0].boundingBox;
+        box = { x: bb.x, y: bb.y, w: bb.width, h: bb.height };
+      }
+    }catch(e){
+      box = null;
+    }
+  }
+
+  if(!box){
+    // Fallback estimate: assume face roughly centered, upper-middle area
+    const fw = w * 0.34;
+    const fh = h * 0.42;
+    box = { x: (w - fw)/2, y: h*0.14, w: fw, h: fh };
+  }
+
+  lastFacePos = box;
+  positionQmarkFromCanvasBox(box);
+  qmark.classList.add('active');
+}
+
+function positionQmarkFromCanvasBox(box){
+  const rect = output.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  const scaleX = rect.width / output.width;
+  const scaleY = rect.height / output.height;
+
+  const headTopX = box.x + box.w/2;
+  const headTopY = box.y;
+
+  const left = (headTopX * scaleX) + (rect.left - stageRect.left);
+  const top = (headTopY * scaleY) + (rect.top - stageRect.top);
+
+  qmark.style.left = left + 'px';
+  qmark.style.top = top + 'px';
+}
+
+retakeBtn.addEventListener('click', () => {
+  captured = false;
+  qmark.classList.remove('active');
+  output.style.display = 'none';
+  output.style.filter = 'none';
+  video.style.display = 'block';
+  retakeBtn.disabled = true;
+  downloadBtn.disabled = true;
+  setStatus('Cámara lista. Toma tu foto.');
+});
+
+downloadBtn.addEventListener('click', () => {
+  // Merge canvas + qmark into a final export canvas
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = output.width;
+  exportCanvas.height = output.height;
+  const ectx = exportCanvas.getContext('2d');
+
+  ectx.drawImage(output, 0, 0);
+
+  // Compute qmark position in canvas space
+  const rect = output.getBoundingClientRect();
+  const scaleX = output.width / rect.width;
+  const scaleY = output.height / rect.height;
+  const qRect = qmark.getBoundingClientRect();
+
+  const qCenterX = (qRect.left + qRect.width/2 - rect.left) * scaleX;
+  const qBottomY = (qRect.bottom - rect.top) * scaleY;
+
+  const fontSize = Math.max(28, output.width * 0.09);
+  ectx.font = `900 ${fontSize}px Segoe UI, sans-serif`;
+  ectx.textAlign = 'center';
+  ectx.textBaseline = 'alphabetic';
+  ectx.save();
+  ectx.translate(qCenterX, qBottomY);
+  ectx.rotate(-6 * Math.PI/180);
+  ectx.fillStyle = 'rgba(0,0,0,0.55)';
+  ectx.fillText('❓', 3, 3);
+  ectx.fillStyle = '#ffffff';
+  ectx.fillText('❓', 0, 0);
+  ectx.restore();
+
+  const link = document.createElement('a');
+  link.download = 'foto-con-interrogacion.png';
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+});
+
+// Drag logic for qmark (mouse + touch)
+let dragging = false;
+let dragOffset = {x:0,y:0};
+
+function startDrag(clientX, clientY){
+  dragging = true;
+  const rect = qmark.getBoundingClientRect();
+  dragOffset.x = clientX - (rect.left + rect.width/2);
+  dragOffset.y = clientY - rect.bottom;
+}
+function moveDrag(clientX, clientY){
+  if(!dragging) return;
+  const stageRect = stage.getBoundingClientRect();
+  const left = clientX - dragOffset.x - stageRect.left;
+  const top = clientY - dragOffset.y - stageRect.top;
+  qmark.style.left = left + 'px';
+  qmark.style.top = top + 'px';
+}
+function endDrag(){ dragging = false; }
+
+qmark.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+window.addEventListener('mouseup', endDrag);
+
+qmark.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  startDrag(t.clientX, t.clientY);
+}, {passive:true});
+window.addEventListener('touchmove', e => {
+  if(!dragging) return;
+  const t = e.touches[0];
+  moveDrag(t.clientX, t.clientY);
+}, {passive:true});
+window.addEventListener('touchend', endDrag);
+
+startCamera();
+</script>
+</body>
+</html>
