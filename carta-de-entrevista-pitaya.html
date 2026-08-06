@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carta de Entrevista - Batidos Pitaya</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #fdf2f8, #f0fdf4);
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 720px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .header .logo {
+    font-size: 48px;
+  }
+
+  .header h1 {
+    color: #c2255c;
+    font-size: 26px;
+    margin-top: 6px;
+  }
+
+  .header p {
+    color: #4d7c0f;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(194, 37, 92, 0.15);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 {
+    color: #c2255c;
+    font-size: 18px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #fbcfe8;
+    padding-bottom: 8px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .grid .full {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 560px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .field label {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    padding: 10px 12px;
+    border: 1.5px solid #f3d4e2;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+    background: #fffdfb;
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: #ec4899;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+  }
+
+  .radio-group input {
+    accent-color: #ec4899;
+  }
+
+  .btn-wrap {
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  button {
+    background: linear-gradient(135deg, #ec4899, #db2777);
+    color: #fff;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(219, 39, 119, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(219, 39, 119, 0.45);
+  }
+
+  button.secondary {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1.5px solid #bbf7d0;
+    margin-left: 10px;
+    box-shadow: none;
+  }
+
+  #resultado {
+    display: none;
+  }
+
+  #cartaTexto {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    background: #fdf7f9;
+    border: 1.5px dashed #f3d4e2;
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .required::after {
+    content: " *";
+    color: #db2777;
+  }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="logo">🍈🥤</div>
+    <h1>Batidos Pitaya</h1>
+    <p>Formulario de Entrevista de Trabajo</p>
+  </div>
+
+  <form id="formEntrevista" class="card no-print">
+    <h2>Datos personales</h2>
+    <div class="grid">
+      <div class="field full">
+        <label class="required">Nombre completo</label>
+        <input type="text" id="nombre" required placeholder="Ej. Maria Fernanda Lopez">
+      </div>
+
+      <div class="field full">
+        <label class="required">Direccion</label>
+        <input type="text" id="direccion" required placeholder="Calle, numero, colonia, ciudad">
+      </div>
+
+      <div class="field">
+        <label class="required">Telefono</label>
+        <input type="tel" id="telefono" required placeholder="Ej. 5512345678">
+      </div>
+
+      <div class="field">
+        <label class="required">Correo electronico</label>
+        <input type="email" id="correo" required placeholder="correo@ejemplo.com">
+      </div>
+
+      <div class="field">
+        <label class="required">Fecha de nacimiento</label>
+        <input type="date" id="nacimiento" required>
+      </div>
+
+      <div class="field">
+        <label class="required">Edad</label>
+        <input type="number" id="edad" required min="15" max="99" placeholder="Ej. 22">
+      </div>
+
+      <div class="field full">
+        <label>Genero</label>
+        <select id="genero">
+          <option value="Prefiero no decir">Prefiero no decir</option>
+          <option value="Femenino">Femenino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 style="margin-top:24px;">Datos de la vacante</h2>
+    <div class="grid">
+      <div class="field full">
+        <label class="required">Puesto al que aplica</label>
+        <select id="puesto" required>
+          <option value="">Selecciona un puesto</option>
+          <option value="Preparador de batidos">Preparador de batidos</option>
+          <option value="Cajero">Cajero</option>
+          <option value="Encargado de sucursal">Encargado de sucursal</option>
+          <option value="Repartidor">Repartidor</option>
+          <option value="Limpieza y apoyo general">Limpieza y apoyo general</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label class="required">Disponibilidad de horario</label>
+        <div class="radio-group">
+          <label><input type="radio" name="horario" value="Tiempo completo" required> Tiempo completo</label>
+          <label><input type="radio" name="horario" value="Medio tiempo"> Medio tiempo</label>
+          <label><input type="radio" name="horario" value="Fines de semana"> Fines de semana</label>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>Experiencia previa</label>
+        <textarea id="experiencia" placeholder="Cuentanos brevemente tu experiencia laboral relacionada"></textarea>
+      </div>
+
+      <div class="field full">
+        <label>Por que quieres trabajar en Batidos Pitaya</label>
+        <textarea id="motivo" placeholder="Escribe tu motivacion"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Sueldo esperado</label>
+        <input type="text" id="sueldo" placeholder="Ej. $8,000 mensuales">
+      </div>
+
+      <div class="field">
+        <label>Fecha disponible para iniciar</label>
+        <input type="date" id="fechaInicio">
+      </div>
+    </div>
+
+    <div class="btn-wrap">
+      <button type="submit">Generar carta de entrevista</button>
+    </div>
+  </form>
+
+  <div id="resultado" class="card">
+    <h2>Carta de entrevista generada</h2>
+    <div id="cartaTexto"></div>
+    <div class="btn-wrap no-print">
+      <button type="button" onclick="descargarCarta()">Descargar carta (.txt)</button>
+      <button type="button" class="secondary" onclick="imprimirCarta()">Imprimir</button>
+      <button type="button" class="secondary" onclick="editarDatos()">Editar datos</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const form = document.getElementById('formEntrevista');
+  const resultado = document.getElementById('resultado');
+  const cartaTexto = document.getElementById('cartaTexto');
+  let cartaFinal = '';
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const nombre = document.getElementById('nombre').value.trim();
+    const direccion = document.getElementById('direccion').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const correo = document.getElementById('correo').value.trim();
+    const nacimiento = document.getElementById('nacimiento').value;
+    const edad = document.getElementById('edad').value;
+    const genero = document.getElementById('genero').value;
+    const puesto = document.getElementById('puesto').value;
+    const horario = document.querySelector('input[name="horario"]:checked')?.value || 'No especificado';
+    const experiencia = document.getElementById('experiencia').value.trim() || 'No especificada';
+    const motivo = document.getElementById('motivo').value.trim() || 'No especificado';
+    const sueldo = document.getElementById('sueldo').value.trim() || 'No especificado';
+    const fechaInicio = document.getElementById('fechaInicio').value || 'No especificada';
+
+    const hoy = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    cartaFinal =
+`BATIDOS PITAYA
+Carta de Entrevista de Trabajo
+Fecha de solicitud: ${hoy}
+
+-----------------------------------
+DATOS PERSONALES
+-----------------------------------
+Nombre completo: ${nombre}
+Direccion: ${direccion}
+Telefono: ${telefono}
+Correo electronico: ${correo}
+Fecha de nacimiento: ${nacimiento || 'No especificada'}
+Edad: ${edad}
+Genero: ${genero}
+
+-----------------------------------
+DATOS DE LA VACANTE
+-----------------------------------
+Puesto solicitado: ${puesto}
+Disponibilidad de horario: ${horario}
+Sueldo esperado: ${sueldo}
+Fecha disponible para iniciar: ${fechaInicio}
+
+Experiencia previa:
+${experiencia}
+
+Motivo para querer trabajar en Batidos Pitaya:
+${motivo}
+
+-----------------------------------
+Declaro que la informacion proporcionada es verdadera y quedo
+en espera de ser contactado(a) para continuar con el proceso
+de entrevista en Batidos Pitaya.
+
+Firma: ______________________________`;
+
+    cartaTexto.textContent = cartaFinal;
+    resultado.style.display = 'block';
+    form.style.display = 'none';
+    resultado.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  function descargarCarta() {
+    const blob = new Blob([cartaFinal], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'carta de entrevista pitaya.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function imprimirCarta() {
+    window.print();
+  }
+
+  function editarDatos() {
+    resultado.style.display = 'none';
+    form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>
