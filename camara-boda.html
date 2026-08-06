@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📸 ¡Pronto será la boda!</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #ffe3ec, #fff6e0);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+  h1 {
+    font-size: 20px;
+    color: #a5457a;
+    margin: 4px 0 12px;
+    text-align: center;
+  }
+  #stage {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 3 / 4;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  }
+  video, canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  #overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  #ring {
+    position: absolute;
+    top: 6%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 56px;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));
+  }
+  #caption {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    text-align: center;
+    font-family: 'Brush Script MT', cursive, -apple-system;
+    font-weight: bold;
+    font-size: 22px;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.8);
+  }
+  #placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+  }
+  #toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 14px;
+    background: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  #toolbar label {
+    font-size: 13px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+  }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #d6558a;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #b8406f; }
+  button.secondary {
+    background: #eee;
+    color: #333;
+  }
+  button.secondary:hover { background: #ddd; }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  #status {
+    font-size: 12px;
+    color: #a5457a;
+    margin-top: 8px;
+    text-align: center;
+    min-height: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>💍 Filtro "¡Pronto será la boda!" 📸</h1>
+
+<div id="stage">
+  <div id="placeholder">Pulsa "Iniciar cámara" para comenzar 📷</div>
+  <video id="video" autoplay playsinline style="display:none;"></video>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <div id="overlay" style="display:none;">
+    <div id="ring">💍</div>
+    <div id="caption">¡Pronto será la boda!</div>
+  </div>
+</div>
+
+<div id="toolbar">
+  <label>Filtro
+    <select id="filterSelect">
+      <option value="none">Ninguno</option>
+      <option value="warm">Cálido ✨</option>
+      <option value="dreamy">Romántico 🌸</option>
+      <option value="bw">Blanco y negro</option>
+      <option value="vintage">Vintage</option>
+      <option value="glow">Brillo suave</option>
+    </select>
+  </label>
+  <button id="startBtn">▶️ Iniciar cámara</button>
+  <button id="captureBtn" disabled>📸 Tomar foto</button>
+  <button id="retakeBtn" class="secondary" style="display:none;">🔄 Repetir</button>
+  <button id="downloadBtn" class="secondary" style="display:none;">💾 Descargar</button>
+</div>
+
+<div id="status"></div>
+
+<script>
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const placeholder = document.getElementById('placeholder');
+  const startBtn = document.getElementById('startBtn');
+  const captureBtn = document.getElementById('captureBtn');
+  const retakeBtn = document.getElementById('retakeBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const filterSelect = document.getElementById('filterSelect');
+  const status = document.getElementById('status');
+
+  let stream = null;
+  let captured = false;
+
+  const filters = {
+    none: 'none',
+    warm: 'saturate(1.3) sepia(0.15) brightness(1.05) contrast(1.05)',
+    dreamy: 'saturate(1.2) brightness(1.1) contrast(0.95) blur(0.4px) hue-rotate(-5deg)',
+    bw: 'grayscale(1) contrast(1.1)',
+    vintage: 'sepia(0.4) contrast(0.9) brightness(0.95) saturate(0.8)',
+    glow: 'brightness(1.15) contrast(0.9) saturate(1.15)'
+  };
+
+  function applyFilterToPreview() {
+    video.style.filter = filters[filterSelect.value];
+  }
+  filterSelect.addEventListener('change', applyFilterToPreview);
+
+  startBtn.addEventListener('click', async () => {
+    try {
+      status.textContent = 'Solicitando acceso a la cámara...';
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false
+      });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      placeholder.style.display = 'none';
+      overlay.style.display = 'block';
+      applyFilterToPreview();
+      captureBtn.disabled = false;
+      startBtn.disabled = true;
+      status.textContent = 'Cámara lista. Cuando quieras, toma la foto 💕';
+    } catch (err) {
+      status.textContent = 'No se pudo acceder a la cámara. Revisa los permisos del navegador.';
+    }
+  });
+
+  captureBtn.addEventListener('click', () => {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    canvas.width = w;
+    canvas.height = h;
+
+    // Dibujar el video con el filtro aplicado
+    ctx.filter = filters[filterSelect.value];
+    ctx.drawImage(video, 0, 0, w, h);
+    ctx.filter = 'none';
+
+    // Dibujar el anillo 💍
+    const ringSize = h * 0.09;
+    ctx.font = `${ringSize}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('💍', w / 2, h * 0.16);
+    ctx.shadowBlur = 0;
+
+    // Dibujar el texto "¡Pronto será la boda!"
+    const fontSize = Math.max(18, w * 0.055);
+    ctx.font = `bold ${fontSize}px 'Brush Script MT', cursive, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = fontSize * 0.12;
+    ctx.lineJoin = 'round';
+    ctx.textAlign = 'center';
+    const text = '¡Pronto será la boda!';
+    const ty = h * 0.28;
+    ctx.strokeText(text, w / 2, ty);
+    ctx.fillText(text, w / 2, ty);
+
+    // Mostrar canvas, ocultar video y overlay en vivo
+    canvas.style.display = 'block';
+    video.style.display = 'none';
+    overlay.style.display = 'none';
+
+    // Detener cámara
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+    }
+
+    captureBtn.style.display = 'none';
+    startBtn.style.display = 'none';
+    filterSelect.disabled = true;
+    retakeBtn.style.display = 'inline-block';
+    downloadBtn.style.display = 'inline-block';
+    captured = true;
+    status.textContent = '¡Foto lista! 💍✨';
+  });
+
+  retakeBtn.addEventListener('click', () => {
+    canvas.style.display = 'none';
+    placeholder.style.display = 'flex';
+    startBtn.style.display = 'inline-block';
+    startBtn.disabled = false;
+    captureBtn.style.display = 'inline-block';
+    captureBtn.disabled = true;
+    retakeBtn.style.display = 'none';
+    downloadBtn.style.display = 'none';
+    filterSelect.disabled = false;
+    status.textContent = '';
+    captured = false;
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'pronto-sera-la-boda.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+</script>
+
+</body>
+</html>
