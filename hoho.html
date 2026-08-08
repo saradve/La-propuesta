@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>hoho</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #0b1e3d, #1e3c72);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .titulo {
+    color: #fff;
+    font-size: 3em;
+    text-shadow: 0 0 15px #ff4d4d, 0 0 25px #ffd700;
+    margin-top: 30px;
+    letter-spacing: 3px;
+    text-align: center;
+    z-index: 2;
+  }
+
+  .escena {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 60px;
+    margin: 40px 0 60px;
+    z-index: 2;
+  }
+
+  /* ---- ARBOL ---- */
+  .arbol {
+    position: relative;
+    width: 160px;
+    height: 220px;
+  }
+  .capa {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 70px solid transparent;
+    border-right: 70px solid transparent;
+    border-bottom: 90px solid #1f7a3d;
+  }
+  .capa1 { bottom: 40px; border-left-width: 40px; border-right-width: 40px; border-bottom-width: 60px; }
+  .capa2 { bottom: 90px; border-left-width: 55px; border-right-width: 55px; border-bottom-width: 75px; }
+  .capa3 { bottom: 150px; border-left-width: 70px; border-right-width: 70px; border-bottom-width: 90px; }
+  .tronco {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 25px;
+    height: 40px;
+    background: #6b4226;
+    border-radius: 2px;
+  }
+  .estrella {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 30px;
+    color: gold;
+    text-shadow: 0 0 10px gold;
+  }
+  .bola {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .b1 { top: 100px; left: 40%; background: #ff4d4d; color:#ff4d4d;}
+  .b2 { top: 130px; left: 60%; background: #ffd700; color:#ffd700;}
+  .b3 { top: 160px; left: 35%; background: #4da6ff; color:#4da6ff;}
+  .b4 { top: 190px; left: 65%; background: #ff4d4d; color:#ff4d4d;}
+  .b5 { top: 200px; left: 45%; background: #ffd700; color:#ffd700;}
+
+  /* ---- MUÑECO DE NIEVE ---- */
+  .muneco {
+    position: relative;
+    width: 140px;
+    height: 230px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .bola-nieve {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: inset -8px -8px 15px rgba(0,0,0,0.15);
+  }
+  .cabeza { width: 70px; height: 70px; z-index: 3; position: relative;}
+  .cuerpo { width: 100px; height: 100px; margin-top: -20px; z-index: 2; position: relative;}
+  .base { width: 130px; height: 130px; margin-top: -35px; z-index: 1; position: relative;}
+
+  .sombrero {
+    position: absolute;
+    top: -38px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    z-index: 4;
+  }
+  .sombrero-copa {
+    width: 40px;
+    height: 40px;
+    background: #1a1a1a;
+    border-radius: 6px 6px 0 0;
+    margin: 0 auto;
+  }
+  .sombrero-ala {
+    width: 60px;
+    height: 10px;
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  .sombrero-cinta {
+    width: 40px;
+    height: 8px;
+    background: #b30000;
+    margin: 0 auto;
+  }
+
+  .ojo {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #222;
+    border-radius: 50%;
+    top: 25px;
+  }
+  .ojo-izq { left: 20px; }
+  .ojo-der { right: 20px; }
+
+  .nariz {
+    position: absolute;
+    top: 33px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-left: 18px solid #ff8c00;
+  }
+
+  .boca {
+    position: absolute;
+    top: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+  }
+  .boca span {
+    width: 3px;
+    height: 3px;
+    background: #222;
+    border-radius: 50%;
+  }
+
+  .boton {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 7px;
+    background: #222;
+    border-radius: 50%;
+  }
+  .boton1 { top: 25px; }
+  .boton2 { top: 45px; }
+  .boton3 { top: 65px; }
+
+  .bufanda {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 14px;
+    background: #cc0000;
+    border-radius: 4px;
+    z-index: 4;
+  }
+  .bufanda-cola {
+    position: absolute;
+    top: 5px;
+    left: 60%;
+    width: 12px;
+    height: 35px;
+    background: #cc0000;
+    border-radius: 3px;
+    transform: rotate(15deg);
+    z-index: 4;
+  }
+
+  .brazo {
+    position: absolute;
+    width: 55px;
+    height: 4px;
+    background: #6b4226;
+    top: 45px;
+  }
+  .brazo-izq { left: -35px; transform: rotate(20deg); }
+  .brazo-der { right: -35px; transform: rotate(-20deg); }
+
+  /* ---- CAMARA ---- */
+  .camara-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .camara {
+    width: 130px;
+    height: 85px;
+    background: linear-gradient(145deg, #2b2b2b, #111);
+    border-radius: 10px;
+    position: relative;
+    box-shadow: 0 0 20px rgba(255,255,255,0.15);
+  }
+  .camara::before {
+    content: "";
+    position: absolute;
+    top: -18px;
+    left: 18px;
+    width: 45px;
+    height: 20px;
+    background: #1a1a1a;
+    border-radius: 4px 4px 0 0;
+  }
+  .lente-ext {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 55px;
+    height: 55px;
+    background: radial-gradient(circle at 35% 35%, #6cc9ff, #0b3d66 70%, #000);
+    border-radius: 50%;
+    border: 5px solid #444;
+    box-shadow: 0 0 15px rgba(108,201,255,0.6);
+  }
+  .flash {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    width: 14px;
+    height: 10px;
+    background: #cfe8ff;
+    border-radius: 2px;
+  }
+  .boton-disp {
+    position: absolute;
+    top: -8px;
+    right: 15px;
+    width: 14px;
+    height: 8px;
+    background: #999;
+    border-radius: 3px;
+  }
+
+  .nieve {
+    position: fixed;
+    top: -10px;
+    color: #fff;
+    font-size: 1.2em;
+    animation: caer linear infinite;
+    opacity: 0.85;
+    z-index: 1;
+  }
+  @keyframes caer {
+    to { transform: translateY(105vh); }
+  }
+
+  .pie {
+    color: #cfd8e3;
+    font-size: 0.9em;
+    z-index: 2;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .camara-wrap { cursor: pointer; }
+  .camara { transition: transform 0.1s; }
+  .camara-wrap:active .camara { transform: scale(0.93); }
+
+  .visor-camara {
+    width: 220px;
+    height: 165px;
+    background: #000;
+    border-radius: 12px;
+    border: 6px solid #222;
+    box-shadow: 0 0 20px rgba(255,255,255,0.15);
+    overflow: hidden;
+    position: relative;
+  }
+  .visor-camara video,
+  .visor-camara img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1); /* efecto espejo */
+  }
+  .visor-camara .foto-final {
+    transform: none; /* la foto capturada ya viene con el texto en su orientación correcta */
+  }
+
+  .btn-camara {
+    margin-top: 12px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 25px;
+    background: linear-gradient(145deg, #cc0000, #900);
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.95em;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  }
+  .btn-camara:hover { filter: brightness(1.1); }
+  .btn-camara:active { transform: scale(0.96); }
+
+  .aviso-camara {
+    color: #ffd9d9;
+    font-size: 0.8em;
+    max-width: 220px;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .visor-camara {
+    width: 300px !important;
+    height: 225px !important;
+  }
+
+  .letrero-anonuevo {
+    position: absolute;
+    top: -55px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(145deg, #ffd700, #ffae00);
+    color: #7a0000;
+    font-weight: bold;
+    font-size: 0.85em;
+    padding: 6px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    box-shadow: 0 0 12px rgba(255,215,0,0.7);
+    text-align: center;
+    z-index: 5;
+  }
+  .letrero-anonuevo::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 6px 0 6px;
+    border-style: solid;
+    border-color: #ffae00 transparent transparent transparent;
+  }
+
+  .flash-pantalla {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+  }
+  .flash-pantalla.activo {
+    animation: destello 0.4s ease-out;
+  }
+  @keyframes destello {
+    0% { opacity: 0.95; }
+    100% { opacity: 0; }
+  }
+
+  .mensaje-foto {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    opacity: 0;
+    transition: opacity 0.4s;
+    z-index: 60;
+  }
+  .mensaje-foto.mostrar { opacity: 1; }
+</style>
+</head>
+<body>
+
+  <div class="titulo">🎄 ¡FELIZ NAVIDAD! 🎅</div>
+
+  <div class="escena" id="escena">
+
+    <!-- ARBOL -->
+    <div class="arbol">
+      <div class="estrella">⭐</div>
+      <div class="capa capa1"></div>
+      <div class="capa capa2"></div>
+      <div class="capa capa3"></div>
+      <div class="tronco"></div>
+      <div class="bola b1"></div>
+      <div class="bola b2"></div>
+      <div class="bola b3"></div>
+      <div class="bola b4"></div>
+      <div class="bola b5"></div>
+    </div>
+
+    <!-- CAMARA REAL (EN MEDIO, GRANDE) -->
+    <div class="camara-wrap" id="camaraWrap">
+      <div class="visor-camara" id="visorCamara">
+        <video id="video" autoplay playsinline></video>
+      </div>
+      <div style="text-align:center;">
+        <button class="btn-camara" onclick="tomarFoto()">📸 Tomar foto</button>
+      </div>
+      <div class="aviso-camara" id="avisoCamara"></div>
+    </div>
+
+    <!-- MUÑECO DE NIEVE (DERECHA) -->
+    <div class="muneco">
+      <div class="letrero-anonuevo">🎆 ¡Feliz Año Nuevo! 🎆</div>
+      <div class="bola-nieve cabeza">
+        <div class="sombrero">
+          <div class="sombrero-copa"></div>
+          <div class="sombrero-cinta"></div>
+          <div class="sombrero-ala"></div>
+        </div>
+        <div class="bufanda"></div>
+        <div class="bufanda-cola"></div>
+        <div class="ojo ojo-izq"></div>
+        <div class="ojo ojo-der"></div>
+        <div class="nariz"></div>
+        <div class="boca"><span></span><span></span><span></span></div>
+      </div>
+      <div class="bola-nieve cuerpo">
+        <div class="brazo brazo-izq"></div>
+        <div class="brazo brazo-der"></div>
+        <div class="boton boton1"></div>
+        <div class="boton boton2"></div>
+      </div>
+      <div class="bola-nieve base">
+        <div class="boton boton3"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pie">📸 ¡Da clic en "Tomar foto" y sal en la imagen junto al muñeco de nieve y el árbol! 🎁</div>
+
+  <canvas id="lienzo" style="display:none;"></canvas>
+  <div class="flash-pantalla" id="flashPantalla"></div>
+  <div class="mensaje-foto" id="mensajeFoto">📸 ¡Foto capturada! Descargando...</div>
+
+  <script>
+    // Generar copos de nieve cayendo
+    const totalCopos = 40;
+    for (let i = 0; i < totalCopos; i++) {
+      const copo = document.createElement('div');
+      copo.className = 'nieve';
+      copo.textContent = '❄';
+      copo.style.left = Math.random() * 100 + 'vw';
+      copo.style.animationDuration = (Math.random() * 5 + 5) + 's';
+      copo.style.animationDelay = (Math.random() * 5) + 's';
+      copo.style.fontSize = (Math.random() * 12 + 10) + 'px';
+      document.body.appendChild(copo);
+    }
+
+    const video = document.getElementById('video');
+    const aviso = document.getElementById('avisoCamara');
+
+    // Pedir acceso a la cámara del dispositivo
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(stream => {
+          video.srcObject = stream;
+        })
+        .catch(err => {
+          aviso.textContent = '⚠️ No se pudo acceder a la cámara. Revisa los permisos del navegador.';
+        });
+    } else {
+      aviso.textContent = '⚠️ Tu navegador no soporta acceso a la cámara.';
+    }
+
+    function tomarFoto() {
+      const flash = document.getElementById('flashPantalla');
+      const mensaje = document.getElementById('mensajeFoto');
+      const visor = document.getElementById('visorCamara');
+      const lienzo = document.getElementById('lienzo');
+
+      if (!video.srcObject) {
+        aviso.textContent = '⚠️ Activa la cámara primero (revisa los permisos).';
+        return;
+      }
+
+      // Efecto de destello
+      flash.classList.remove('activo');
+      void flash.offsetWidth;
+      flash.classList.add('activo');
+
+      // Sonido tipo obturador
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 1000;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (e) {}
+
+      // Capturar el video en un canvas, en espejo, y escribir "Feliz Navidad" arriba
+      const ancho = video.videoWidth || 480;
+      const alto = video.videoHeight || 360;
+      lienzo.width = ancho;
+      lienzo.height = alto;
+      const ctx2d = lienzo.getContext('2d');
+
+      // Dibujar el frame en espejo (para que coincida con lo que ves en el visor)
+      ctx2d.save();
+      ctx2d.translate(ancho, 0);
+      ctx2d.scale(-1, 1);
+      ctx2d.drawImage(video, 0, 0, ancho, alto);
+      ctx2d.restore();
+
+      // Franja roja con texto "Feliz Navidad" arriba de la foto
+      const alturaFranja = Math.max(40, alto * 0.14);
+      ctx2d.fillStyle = 'rgba(180, 0, 0, 0.85)';
+      ctx2d.fillRect(0, 0, ancho, alturaFranja);
+      ctx2d.fillStyle = '#ffd700';
+      ctx2d.font = 'bold ' + Math.floor(alturaFranja * 0.5) + 'px Arial';
+      ctx2d.textAlign = 'center';
+      ctx2d.textBaseline = 'middle';
+      ctx2d.fillText('🎄 ¡Feliz Navidad! 🎅', ancho / 2, alturaFranja / 2);
+
+      // Mostrar la foto capturada en el visor en lugar del video
+      const dataUrl = lienzo.toDataURL('image/png');
+      visor.innerHTML = '<img class="foto-final" src="' + dataUrl + '">';
+
+      // Descargar automáticamente
+      const enlace = document.createElement('a');
+      enlace.download = 'foto-navidena.png';
+      enlace.href = dataUrl;
+      enlace.click();
+
+      mensaje.classList.add('mostrar');
+      setTimeout(() => mensaje.classList.remove('mostrar'), 2500);
+    }
+  </script>
+
+</body>
+</html>
