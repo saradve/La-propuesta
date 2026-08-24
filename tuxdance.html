@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TuxDance</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+  :root{
+    --bg: #0a0f0c;
+    --bg-2: #0f1712;
+    --green: #35e07a;
+    --green-dim: #1f8a4d;
+    --ink: #f2f5f2;
+    --ink-dim: #8fa198;
+    --red: #ff4d4d;
+    --amber: #f4b942;
+    --panel-border: rgba(53,224,122,0.35);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: radial-gradient(ellipse at 50% -10%, #10251a 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+  }
+
+  #app{
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---------- START SCREEN ---------- */
+  #start-screen{
+    position: absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 22px;
+    z-index: 30;
+    padding: 24px;
+    text-align:center;
+    background:
+      radial-gradient(circle at 50% 20%, rgba(53,224,122,0.10), transparent 55%),
+      var(--bg);
+  }
+
+  .logo-wrap{ display:flex; align-items:center; gap:14px; }
+  .logo-tux{ width:64px; height:64px; }
+  .brand{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 46px;
+    letter-spacing: -0.02em;
+    color: var(--green);
+    text-shadow: 0 0 26px rgba(53,224,122,0.45);
+  }
+  .brand span{ color: var(--ink); }
+
+  .tagline{
+    color: var(--ink-dim);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    max-width: 420px;
+  }
+
+  .rules{
+    display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+    margin-top: 6px;
+  }
+  .rule-card{
+    border: 1px solid var(--panel-border);
+    background: rgba(53,224,122,0.05);
+    border-radius: 10px;
+    padding: 12px 16px;
+    width: 150px;
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .rule-card b{
+    display:block;
+    color: var(--green);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    margin-bottom: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  button.primary{
+    margin-top: 10px;
+    background: var(--green);
+    color: #06120a;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 14px 34px;
+    border-radius: 999px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    box-shadow: 0 0 0 0 rgba(53,224,122,0.5);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  button.primary:hover{ transform: translateY(-2px); box-shadow: 0 8px 22px rgba(53,224,122,0.35); }
+  button.primary:active{ transform: translateY(0); }
+
+  #cam-error{
+    color: var(--red);
+    font-size: 12.5px;
+    max-width: 380px;
+    display:none;
+  }
+
+  /* ---------- GAME SCREEN ---------- */
+  #game-screen{
+    position:absolute; inset:0;
+    display:none;
+  }
+  #game-screen.active{ display:block; }
+
+  video#cam{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    filter: saturate(1.05) contrast(1.02);
+    background:#000;
+  }
+
+  .vignette{
+    position:absolute; inset:0;
+    pointer-events:none;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%);
+  }
+
+  #flash{
+    position:absolute; inset:0;
+    background: var(--red);
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .08s ease;
+    z-index: 25;
+  }
+
+  /* top bar */
+  #topbar{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 20px;
+    z-index: 20;
+  }
+  .brand-mini{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:18px; color:var(--green);
+    text-shadow: 0 0 12px rgba(53,224,122,0.5);
+    display:flex; align-items:center; gap:8px;
+  }
+  .brand-mini svg{ width:22px; height:22px; }
+
+  #lives{ display:flex; gap:6px; }
+  .life-dot{
+    width:14px; height:14px; border-radius:50%;
+    background: var(--red);
+    box-shadow: 0 0 8px rgba(255,77,77,0.7);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  .life-dot.lost{ opacity:0.15; background:#333; box-shadow:none; transform: scale(0.7); }
+
+  #score{
+    font-size:13px; color: var(--ink-dim);
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--panel-border);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  #score b{ color: var(--green); font-size:15px; }
+
+  /* command banner */
+  #command-wrap{
+    position:absolute; top: 78px; left:0; right:0;
+    display:flex; justify-content:center;
+    z-index: 20;
+    pointer-events:none;
+  }
+  #command{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 54px;
+    letter-spacing: 0.03em;
+    padding: 6px 30px;
+    border-radius: 14px;
+    background: rgba(6,10,8,0.45);
+    backdrop-filter: blur(3px);
+    transition: color .2s ease, transform .15s ease;
+  }
+  #command.dance{ color: var(--green); text-shadow: 0 0 30px rgba(53,224,122,0.6); }
+  #command.freeze{ color: var(--red); text-shadow: 0 0 30px rgba(255,77,77,0.55); }
+  #command.turn{ color: var(--amber); text-shadow: 0 0 30px rgba(244,185,66,0.55); }
+  #command.pulse{ animation: pulse .35s ease; }
+  @keyframes pulse{ 0%{transform:scale(1);} 40%{transform:scale(1.12);} 100%{transform:scale(1);} }
+
+  #timer-bar-wrap{
+    position:absolute; top: 150px; left:50%; transform:translateX(-50%);
+    width: min(320px, 60vw);
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.12);
+    overflow:hidden;
+    z-index: 20;
+  }
+  #timer-bar{
+    height:100%; width:100%;
+    background: var(--green);
+    transform-origin: left;
+  }
+
+  /* tux monitor box, top right */
+  #tux-box{
+    position:absolute; top:16px; right:16px;
+    width: 150px; height:150px;
+    border-radius: 14px;
+    border: 3px solid var(--green);
+    background: linear-gradient(180deg, #0d1a13, #071009);
+    box-shadow: 0 0 22px rgba(53,224,122,0.35), inset 0 0 20px rgba(0,0,0,0.5);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 20;
+    overflow:hidden;
+  }
+  #tux-box.freeze{ border-color: var(--red); box-shadow: 0 0 22px rgba(255,77,77,0.4), inset 0 0 20px rgba(0,0,0,0.5); }
+  #tux-box.turn{ border-color: var(--amber); box-shadow: 0 0 22px rgba(244,185,66,0.4), inset 0 0 20px rgba(0,0,0,0.5); }
+
+  #tux-svg{ width: 86px; height: 86px; }
+  #tux-svg.dance{ animation: tux-dance 0.55s ease-in-out infinite; }
+  #tux-svg.turn{ animation: tux-spin 0.9s linear infinite; }
+  #tux-svg.freeze{ animation: none; }
+
+  @keyframes tux-dance{
+    0%{ transform: rotate(-9deg) translateY(0); }
+    25%{ transform: rotate(0deg) translateY(-6px); }
+    50%{ transform: rotate(9deg) translateY(0); }
+    75%{ transform: rotate(0deg) translateY(-6px); }
+    100%{ transform: rotate(-9deg) translateY(0); }
+  }
+  @keyframes tux-spin{
+    from{ transform: rotateY(0deg); }
+    to{ transform: rotateY(360deg); }
+  }
+
+  .tux-label{
+    position:absolute; bottom:4px; left:0; right:0;
+    text-align:center; font-size:9px; letter-spacing:0.1em;
+    color: var(--ink-dim); text-transform:uppercase;
+  }
+
+  /* movement meter (only visible during freeze) */
+  #meter-wrap{
+    position:absolute; bottom: 90px; left:50%; transform:translateX(-50%);
+    width: min(300px, 70vw);
+    z-index: 20;
+    opacity:0; transition: opacity .2s ease;
+  }
+  #meter-wrap.show{ opacity:1; }
+  #meter-label{
+    font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    color: var(--ink-dim); margin-bottom:4px; text-align:center;
+  }
+  #meter-track{
+    height:10px; border-radius:6px; background: rgba(255,255,255,0.1);
+    overflow:hidden; border:1px solid rgba(255,255,255,0.15);
+  }
+  #meter-fill{
+    height:100%; width:0%;
+    background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+    transition: width .08s linear;
+  }
+
+  /* countdown overlay before round starts */
+  #countdown{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 120px; font-weight:700; color: var(--green);
+    text-shadow: 0 0 40px rgba(53,224,122,0.6);
+    z-index: 26;
+    background: rgba(6,10,8,0.55);
+    display:none;
+  }
+
+  /* game over */
+  #gameover{
+    position:absolute; inset:0;
+    z-index: 40;
+    display:none;
+    align-items:center; justify-content:center;
+    flex-direction:column; gap:14px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,77,77,0.10), var(--bg) 60%);
+    text-align:center;
+    padding: 24px;
+  }
+  #gameover.active{ display:flex; }
+  #gameover h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 40px; margin:0; color: var(--red);
+    text-shadow: 0 0 26px rgba(255,77,77,0.5);
+  }
+  #final-score{ font-size:16px; color:var(--ink-dim); }
+  #final-score b{ color: var(--green); font-size:22px; }
+
+  #status-line{
+    position:absolute; bottom: 40px; left:50%; transform:translateX(-50%);
+    font-size: 11px; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--ink-dim);
+    z-index: 20;
+    text-align:center;
+  }
+
+  @media (max-width: 560px){
+    #command{ font-size:36px; }
+    #tux-box{ width:100px; height:100px; top:10px; right:10px; }
+    #tux-svg{ width:56px; height:56px; }
+    .brand{ font-size:32px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="start-screen">
+    <div class="logo-wrap">
+      <svg class="logo-tux" viewBox="0 0 100 100"><use href="#tux-shape"></use></svg>
+      <div class="brand">Tux<span>Dance</span></div>
+    </div>
+    <div class="tagline">Baila cuando puedas. Congélate cuando lo diga Tux. No lo decepciones.</div>
+
+    <div class="rules">
+      <div class="rule-card"><b>BAILE</b>Muévete libre, no hay penalización.</div>
+      <div class="rule-card"><b>QUIETO</b>No te muevas nada o pierdes una vida.</div>
+      <div class="rule-card"><b>GIRO</b>Da una vuelta mientras dure.</div>
+    </div>
+
+    <button class="primary" id="start-btn">Activar cámara y jugar</button>
+    <div id="cam-error">No se pudo acceder a la cámara. Revisa los permisos del navegador e inténtalo de nuevo.</div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen">
+    <video id="cam" autoplay playsinline muted></video>
+    <div class="vignette"></div>
+    <div id="flash"></div>
+
+    <div id="topbar">
+      <div class="brand-mini">
+        <svg viewBox="0 0 100 100"><use href="#tux-shape"></use></svg>
+        TuxDance
+      </div>
+      <div id="lives"></div>
+      <div id="score">RONDA <b id="round-num">0</b></div>
+    </div>
+
+    <div id="command-wrap"><div id="command">—</div></div>
+    <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+
+    <div id="tux-box">
+      <svg id="tux-svg" class="dance" viewBox="0 0 100 100"><use href="#tux-shape"></use></svg>
+      <div class="tux-label">TUX</div>
+    </div>
+
+    <div id="meter-wrap">
+      <div id="meter-label">Movimiento detectado</div>
+      <div id="meter-track"><div id="meter-fill"></div></div>
+    </div>
+
+    <div id="status-line">Colócate donde Tux te vea de cuerpo entero</div>
+
+    <div id="countdown">3</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameover">
+    <svg viewBox="0 0 100 100" style="width:70px;height:70px;opacity:.85;"><use href="#tux-shape"></use></svg>
+    <h1>¡Te movieron!</h1>
+    <div id="final-score">Sobreviviste <b id="final-round">0</b> rondas</div>
+    <button class="primary" id="retry-btn">Volver a jugar</button>
+  </div>
+
+</div>
+
+<!-- shared Tux SVG shape -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="tux-shape" viewBox="0 0 100 100">
+    <ellipse cx="50" cy="58" rx="30" ry="34" fill="#161616"/>
+    <ellipse cx="50" cy="64" rx="18" ry="24" fill="#f5f5f5"/>
+    <ellipse cx="50" cy="24" rx="19" ry="18" fill="#161616"/>
+    <ellipse cx="50" cy="29" rx="11" ry="10" fill="#f5f5f5"/>
+    <circle cx="44" cy="21" r="3.2" fill="#161616"/>
+    <circle cx="57" cy="21" r="3.2" fill="#161616"/>
+    <circle cx="45" cy="20" r="1" fill="#fff"/>
+    <circle cx="58" cy="20" r="1" fill="#fff"/>
+    <path d="M48 26 L52 26 L50 31 Z" fill="#f4a300"/>
+    <ellipse cx="38" cy="80" rx="7" ry="4" fill="#f4a300"/>
+    <ellipse cx="62" cy="80" rx="7" ry="4" fill="#f4a300"/>
+    <path d="M20 55 Q10 60 16 72" stroke="#161616" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M80 55 Q90 60 84 72" stroke="#161616" stroke-width="7" fill="none" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<canvas id="proc-canvas" style="display:none;"></canvas>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- DOM ----------
+  const startScreen   = document.getElementById('start-screen');
+  const startBtn      = document.getElementById('start-btn');
+  const camError      = document.getElementById('cam-error');
+  const gameScreen    = document.getElementById('game-screen');
+  const video         = document.getElementById('cam');
+  const commandEl     = document.getElementById('command');
+  const timerBar       = document.getElementById('timer-bar');
+  const tuxBox         = document.getElementById('tux-box');
+  const tuxSvg         = document.getElementById('tux-svg');
+  const livesEl        = document.getElementById('lives');
+  const roundNumEl     = document.getElementById('round-num');
+  const flashEl        = document.getElementById('flash');
+  const meterWrap       = document.getElementById('meter-wrap');
+  const meterFill        = document.getElementById('meter-fill');
+  const countdownEl    = document.getElementById('countdown');
+  const gameoverEl      = document.getElementById('gameover');
+  const finalRoundEl   = document.getElementById('final-round');
+  const retryBtn       = document.getElementById('retry-btn');
+  const statusLine     = document.getElementById('status-line');
+
+  const canvas = document.getElementById('proc-canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const PROC_W = 96, PROC_H = 72;
+  canvas.width = PROC_W; canvas.height = PROC_H;
+
+  // ---------- STATE ----------
+  let stream = null;
+  let lives = 3;
+  let round = 0;
+  let running = false;
+  let phase = 'idle'; // 'dance' | 'freeze' | 'turn'
+  let prevFrame = null;
+  let motionRAF = null;
+  let phaseTimeout = null;
+  let phaseStart = 0;
+  let phaseDuration = 0;
+  let timerRAF = null;
+  let freezeBaselineSet = false;
+  let freezeStrikes = 0;
+
+  const COMMANDS = [
+    { key:'dance', label:'BAILE', min:2200, max:3800 },
+    { key:'freeze', label:'QUIETO', min:1800, max:2800 },
+    { key:'turn', label:'GIRO', min:1800, max:3200 }
+  ];
+
+  // ---------- INIT LIVES UI ----------
+  function renderLives(){
+    livesEl.innerHTML = '';
+    for(let i=0;i<3;i++){
+      const d = document.createElement('div');
+      d.className = 'life-dot' + (i < (3-lives) ? ' lost' : '');
+      livesEl.appendChild(d);
+    }
+  }
+
+  // ---------- CAMERA ----------
+  async function startCamera(){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio:false });
+      video.srcObject = stream;
+      await video.play();
+      return true;
+    }catch(e){
+      console.error(e);
+      return false;
+    }
+  }
+
+  startBtn.addEventListener('click', async () => {
+    startBtn.disabled = true;
+    startBtn.textContent = 'Solicitando cámara...';
+    const ok = await startCamera();
+    if(!ok){
+      camError.style.display = 'block';
+      startBtn.disabled = false;
+      startBtn.textContent = 'Activar cámara y jugar';
+      return;
+    }
+    camError.style.display = 'none';
+    startScreen.style.display = 'none';
+    gameScreen.classList.add('active');
+    beginGame();
+  });
+
+  retryBtn.addEventListener('click', () => {
+    gameoverEl.classList.remove('active');
+    lives = 3; round = 0;
+    renderLives();
+    roundNumEl.textContent = '0';
+    beginGame();
+  });
+
+  // ---------- MOTION DETECTION ----------
+  function sampleMotion(){
+    if(video.readyState < 2) return 0;
+    ctx.drawImage(video, 0, 0, PROC_W, PROC_H);
+    const frame = ctx.getImageData(0, 0, PROC_W, PROC_H).data;
+
+    if(!prevFrame){
+      prevFrame = frame;
+      return 0;
+    }
+    let diffSum = 0;
+    let changedPixels = 0;
+    const total = PROC_W * PROC_H;
+    for(let i=0; i<frame.length; i+=4){
+      const dr = Math.abs(frame[i] - prevFrame[i]);
+      const dg = Math.abs(frame[i+1] - prevFrame[i+1]);
+      const db = Math.abs(frame[i+2] - prevFrame[i+2]);
+      const d = (dr+dg+db)/3;
+      if(d > 22){ changedPixels++; }
+      diffSum += d;
+    }
+    prevFrame = frame;
+    return changedPixels / total; // 0..1 fraction of pixels that changed
+  }
+
+  function motionLoop(){
+    const m = sampleMotion();
+
+    if(phase === 'freeze'){
+      const pct = Math.min(100, Math.round(m * 100 * 6));
+      meterFill.style.width = pct + '%';
+
+      // small grace period right when freeze starts, so the stop itself isn't penalized
+      const elapsed = performance.now() - phaseStart;
+      if(elapsed > 450){
+        if(m > 0.035){
+          freezeStrikes++;
+          if(freezeStrikes > 2){
+            loseLife();
+            freezeStrikes = -999999; // prevent repeated triggers this phase
+          }
+        }
+      }
+    } else {
+      meterFill.style.width = '0%';
+    }
+
+    motionRAF = requestAnimationFrame(motionLoop);
+  }
+
+  // ---------- GAME FLOW ----------
+  function beginGame(){
+    running = true;
+    lives = 3;
+    round = 0;
+    renderLives();
+    roundNumEl.textContent = '0';
+    prevFrame = null;
+    if(motionRAF) cancelAnimationFrame(motionRAF);
+    motionLoop();
+    countdownSequence(() => nextPhase());
+  }
+
+  function countdownSequence(cb){
+    let n = 3;
+    countdownEl.style.display = 'flex';
+    countdownEl.textContent = n;
+    statusLine.textContent = 'Prepárate...';
+    const iv = setInterval(() => {
+      n--;
+      if(n <= 0){
+        clearInterval(iv);
+        countdownEl.style.display = 'none';
+        cb();
+      } else {
+        countdownEl.textContent = n;
+      }
+    }, 700);
+  }
+
+  function pickCommand(){
+    // weighted so freeze doesn't happen twice in a row too predictably, but simple random is fine
+    const idx = Math.floor(Math.random() * COMMANDS.length);
+    return COMMANDS[idx];
+  }
+
+  function nextPhase(){
+    if(!running) return;
+    const cmd = pickCommand();
+    phase = cmd.key;
+    round++;
+    roundNumEl.textContent = String(round);
+    freezeStrikes = 0;
+
+    commandEl.textContent = cmd.label;
+    commandEl.className = cmd.key + ' pulse';
+    setTimeout(() => commandEl.classList.remove('pulse'), 350);
+
+    tuxBox.className = cmd.key;
+    tuxSvg.className = cmd.key;
+
+    if(cmd.key === 'freeze'){
+      meterWrap.classList.add('show');
+      statusLine.textContent = 'No te muevas...';
+      prevFrame = null; // reset baseline right as freeze starts
+    } else {
+      meterWrap.classList.remove('show');
+      statusLine.textContent = cmd.key === 'dance' ? '¡Muévete!' : '¡Da la vuelta!';
+    }
+
+    phaseDuration = cmd.min + Math.random() * (cmd.max - cmd.min);
+    phaseStart = performance.now();
+    animateTimerBar(phaseDuration);
+
+    clearTimeout(phaseTimeout);
+    phaseTimeout = setTimeout(() => {
+      if(running) nextPhase();
+    }, phaseDuration);
+  }
+
+  function animateTimerBar(duration){
+    if(timerRAF) cancelAnimationFrame(timerRAF);
+    const start = performance.now();
+    timerBar.style.transform = 'scaleX(1)';
+    function step(t){
+      const elapsed = t - start;
+      const pct = Math.max(0, 1 - elapsed/duration);
+      timerBar.style.transform = 'scaleX(' + pct + ')';
+      if(elapsed < duration && running){
+        timerRAF = requestAnimationFrame(step);
+      }
+    }
+    timerRAF = requestAnimationFrame(step);
+  }
+
+  function loseLife(){
+    lives--;
+    renderLives();
+    flashScreen();
+    if(lives <= 0){
+      endGame();
+    }
+  }
+
+  function flashScreen(){
+    flashEl.style.opacity = '0.55';
+    setTimeout(() => { flashEl.style.opacity = '0'; }, 120);
+  }
+
+  function endGame(){
+    running = false;
+    clearTimeout(phaseTimeout);
+    if(timerRAF) cancelAnimationFrame(timerRAF);
+    if(motionRAF) cancelAnimationFrame(motionRAF);
+    finalRoundEl.textContent = String(Math.max(0, round-1));
+    gameoverEl.classList.add('active');
+  }
+
+})();
+</script>
+
+</body>
+</html>
