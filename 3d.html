@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RetroLens 3D</title>
+<style>
+  :root{
+    --gold:#ffd54a;
+    --cyan:#5ad1e6;
+    --panel-bg:rgba(10,12,20,0.72);
+    --panel-border:rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:#05060a;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow:hidden;
+    color:#fff;
+  }
+  #stage{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #canvasWrap{
+    position:relative;
+    max-width:100vw; max-height:100vh;
+    aspect-ratio: var(--ar, 16/9);
+    width:100%;
+  }
+  canvas{
+    width:100%; height:100%;
+    display:block;
+    background:#000;
+    border-radius:0;
+  }
+  video{ display:none; }
+
+  #topPanel{
+    position:absolute; top:14px; left:14px; right:14px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:10px; pointer-events:none;
+  }
+  #hud{
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    backdrop-filter: blur(6px);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:13px;
+    line-height:1.5;
+    max-width:78%;
+    pointer-events:none;
+  }
+  #hud .mode{ color:var(--gold); font-weight:700; letter-spacing:.3px; }
+  #hud .filter{ color:var(--cyan); font-weight:700; letter-spacing:.3px; }
+  #hud .hint{ color:rgba(255,255,255,0.55); font-size:11px; }
+
+  #brand{
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    backdrop-filter: blur(6px);
+    border-radius:12px;
+    padding:8px 12px;
+    font-size:13px;
+    font-weight:700;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  #brand span{ color:var(--gold); }
+
+  #controls{
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px; align-items:center;
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    backdrop-filter: blur(6px);
+    border-radius:999px;
+    padding:8px 10px;
+  }
+  .btn{
+    appearance:none; border:none; cursor:pointer;
+    background:rgba(255,255,255,0.08);
+    color:#fff; border-radius:999px;
+    padding:9px 14px;
+    font-size:13px; font-weight:600;
+    display:flex; align-items:center; gap:6px;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .btn:hover{ background:rgba(255,255,255,0.16); }
+  .btn:active{ transform:scale(0.95); }
+  .btn.accent{ background:linear-gradient(135deg,var(--gold),#ff9d4a); color:#1a1200; }
+
+  #startOverlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px;
+    background:radial-gradient(circle at 50% 30%, #131826 0%, #05060a 70%);
+    text-align:center; padding:30px; z-index:20;
+  }
+  #startOverlay h1{ margin:0; font-size:26px; }
+  #startOverlay h1 span{ color:var(--gold); }
+  #startOverlay p{ margin:0; color:rgba(255,255,255,.65); max-width:420px; font-size:14px; line-height:1.6;}
+  #startBtn{
+    margin-top:8px;
+    background:linear-gradient(135deg,var(--gold),#ff9d4a);
+    color:#1a1200; border:none; border-radius:999px;
+    padding:14px 30px; font-size:15px; font-weight:700; cursor:pointer;
+  }
+  #startBtn:active{ transform:scale(.97); }
+  #errBox{
+    display:none; margin-top:10px; color:#ff8080; font-size:13px; max-width:420px;
+  }
+
+  #loadingText{
+    position:absolute; bottom:70px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:rgba(255,255,255,.5); pointer-events:none;
+  }
+
+  @media (max-width:600px){
+    #hud{ font-size:11.5px; padding:8px 10px; max-width:70%;}
+    #brand{ font-size:11px; padding:7px 9px; }
+    .btn{ padding:8px 11px; font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="canvasWrap">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="topPanel">
+      <div id="hud">
+        <div><span class="filter">MODO:</span> <span class="mode" id="modeLabel">3D (5 dedos)</span> <span class="hint">[tecla 'e' / puños con 2 manos]</span></div>
+        <div><span class="filter">FILTRO:</span> <span class="filter" id="filterLabel">DUAL-TONE</span> <span class="hint">[toca pulgar-meñique / 'n' · 'p']</span></div>
+      </div>
+      <div id="brand">🔮 Retro<span>Lens</span> 3D</div>
+    </div>
+
+    <div id="loadingText">Muestra ambas manos a la cámara para abrir el lente ✋🤚</div>
+
+    <div id="controls">
+      <button class="btn" id="prevBtn">◀ Filtro</button>
+      <button class="btn accent" id="modeBtn">Cambiar Modo</button>
+      <button class="btn" id="nextBtn">Filtro ▶</button>
+    </div>
+  </div>
+
+  <div id="startOverlay">
+    <h1>🔮 Retro<span>Lens</span> 3D</h1>
+    <p>Un lente de realidad aumentada controlado con tus manos. Abre las palmas frente a la cámara y forma una ventana con los dedos: dentro aparecerá el video filtrado y deformado en 3D.</p>
+    <button id="startBtn">Activar cámara</button>
+    <div id="errBox"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675466124/drawing_utils.js" crossorigin="anonymous"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', {willReadFrequently:true});
+  const canvasWrap = document.getElementById('canvasWrap');
+  const startOverlay = document.getElementById('startOverlay');
+  const startBtn = document.getElementById('startBtn');
+  const errBox = document.getElementById('errBox');
+  const modeLabel = document.getElementById('modeLabel');
+  const filterLabel = document.getElementById('filterLabel');
+  const modeBtn = document.getElementById('modeBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const loadingText = document.getElementById('loadingText');
+
+  // offscreen canvas for the filtered/mirrored source texture
+  const off = document.createElement('canvas');
+  const offCtx = off.getContext('2d', {willReadFrequently:true});
+
+  const FILTERS = ['dual-tone','thermal','sketch','pixelate','glitch','invert','red-channel','edge','blur','cartoon','rainbow-wave'];
+  let filterIdx = 0;
+  let mode = '3D'; // '3D' or '2D'
+
+  function updateHUD(){
+    filterLabel.textContent = FILTERS[filterIdx].toUpperCase();
+    modeLabel.textContent = mode === '3D' ? '3D (5 dedos)' : '2D (pulgar-meñique)';
+  }
+  updateHUD();
+
+  function cycleFilter(dir){
+    filterIdx = (filterIdx + dir + FILTERS.length) % FILTERS.length;
+    updateHUD();
+  }
+  function toggleMode(){
+    mode = mode === '3D' ? '2D' : '3D';
+    updateHUD();
+  }
+
+  nextBtn.addEventListener('click', ()=>cycleFilter(1));
+  prevBtn.addEventListener('click', ()=>cycleFilter(-1));
+  modeBtn.addEventListener('click', toggleMode);
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === 'n') cycleFilter(1);
+    else if(e.key === 'p') cycleFilter(-1);
+    else if(e.key === 'e') toggleMode();
+  });
+
+  // ---------- Pixel filters ----------
+  function clamp(v){ return v<0?0:(v>255?255:v); }
+
+  function jetColor(t){
+    t = clamp(t*255)/255;
+    const r = clamp(255*Math.min(Math.max(1.5 - Math.abs(4*t-3),0),1));
+    const g = clamp(255*Math.min(Math.max(1.5 - Math.abs(4*t-2),0),1));
+    const b = clamp(255*Math.min(Math.max(1.5 - Math.abs(4*t-1),0),1));
+    return [r,g,b];
+  }
+
+  function computeEdgeMagnitude(src, w, h){
+    const mag = new Float32Array(w*h);
+    for(let y=1;y<h-1;y++){
+      const row = y*w, rowUp=(y-1)*w, rowDn=(y+1)*w;
+      for(let x=1;x<w-1;x++){
+        const iL=(row+x-1)*4, iR=(row+x+1)*4, iU=(rowUp+x)*4, iD=(rowDn+x)*4;
+        const gL = 0.3*src[iL]+0.59*src[iL+1]+0.11*src[iL+2];
+        const gR = 0.3*src[iR]+0.59*src[iR+1]+0.11*src[iR+2];
+        const gU = 0.3*src[iU]+0.59*src[iU+1]+0.11*src[iU+2];
+        const gD = 0.3*src[iD]+0.59*src[iD+1]+0.11*src[iD+2];
+        const gx = gR-gL, gy = gD-gU;
+        mag[row+x] = Math.sqrt(gx*gx+gy*gy);
+      }
+    }
+    return mag;
+  }
+
+  let glitchState = { t:0 };
+
+  function applyPixelFilter(context, w, h, name, time){
+    const imgData = context.getImageData(0,0,w,h);
+    const d = imgData.data;
+
+    if(name === 'invert'){
+      for(let i=0;i<d.length;i+=4){ d[i]=255-d[i]; d[i+1]=255-d[i+1]; d[i+2]=255-d[i+2]; }
+    }
+    else if(name === 'red-channel'){
+      for(let i=0;i<d.length;i+=4){ d[i+1]=d[i+1]*0.15; d[i+2]=d[i+2]*0.15; }
+    }
+    else if(name === 'thermal'){
+      for(let i=0;i<d.length;i+=4){
+        const lum = (0.3*d[i]+0.59*d[i+1]+0.11*d[i+2])/255;
+        const c = jetColor(lum);
+        d[i]=c[0]; d[i+1]=c[1]; d[i+2]=c[2];
+      }
+    }
+    else if(name === 'dual-tone'){
+      const cA=[18,12,54], cB=[255,196,64];
+      for(let i=0;i<d.length;i+=4){
+        const lum = (0.3*d[i]+0.59*d[i+1]+0.11*d[i+2])/255;
+        d[i]=cA[0]+(cB[0]-cA[0])*lum;
+        d[i+1]=cA[1]+(cB[1]-cA[1])*lum;
+        d[i+2]=cA[2]+(cB[2]-cA[2])*lum;
+      }
+    }
+    else if(name === 'pixelate'){
+      const block = Math.max(6, Math.round(w/70));
+      const src = new Uint8ClampedArray(d);
+      for(let by=0; by<h; by+=block){
+        for(let bx=0; bx<w; bx+=block){
+          const si = (by*w+bx)*4;
+          const r=src[si], g=src[si+1], b=src[si+2];
+          for(let y=by; y<Math.min(by+block,h); y++){
+            for(let x=bx; x<Math.min(bx+block,w); x++){
+              const di=(y*w+x)*4;
+              d[di]=r; d[di+1]=g; d[di+2]=b;
+            }
+          }
+        }
+      }
+    }
+    else if(name === 'edge'){
+      const src = new Uint8ClampedArray(d);
+      const mag = computeEdgeMagnitude(src, w, h);
+      for(let i=0, p=0; i<d.length; i+=4, p++){
+        const v = clamp(mag[p]*1.6);
+        d[i]=v*0.4; d[i+1]=v; d[i+2]=v*0.9;
+      }
+    }
+    else if(name === 'sketch'){
+      const src = new Uint8ClampedArray(d);
+      const mag = computeEdgeMagnitude(src, w, h);
+      for(let i=0, p=0; i<d.length; i+=4, p++){
+        const v = clamp(255 - mag[p]*2.2);
+        d[i]=v; d[i+1]=v; d[i+2]=v;
+      }
+    }
+    else if(name === 'cartoon'){
+      const src = new Uint8ClampedArray(d);
+      const mag = computeEdgeMagnitude(src, w, h);
+      const levels = 5, step = 255/(levels-1);
+      for(let i=0, p=0; i<d.length; i+=4, p++){
+        if(mag[p] > 40){
+          d[i]=10; d[i+1]=10; d[i+2]=10;
+        } else {
+          d[i]  = Math.round(src[i]/step)*step;
+          d[i+1]= Math.round(src[i+1]/step)*step;
+          d[i+2]= Math.round(src[i+2]/step)*step;
+        }
+      }
+    }
+    else if(name === 'rainbow-wave'){
+      const colFactor = new Float32Array(w*3);
+      for(let x=0;x<w;x++){
+        const phase = (x/w)*Math.PI*4 + time*2.2;
+        colFactor[x*3]   = 0.55+0.45*Math.sin(phase);
+        colFactor[x*3+1] = 0.55+0.45*Math.sin(phase+2.094);
+        colFactor[x*3+2] = 0.55+0.45*Math.sin(phase+4.188);
+      }
+      for(let y=0;y<h;y++){
+        const row=y*w;
+        for(let x=0;x<w;x++){
+          const i=(row+x)*4;
+          const lum = 0.3*d[i]+0.59*d[i+1]+0.11*d[i+2];
+          d[i]  = clamp(lum*colFactor[x*3]*1.15);
+          d[i+1]= clamp(lum*colFactor[x*3+1]*1.15);
+          d[i+2]= clamp(lum*colFactor[x*3+2]*1.15);
+        }
+      }
+    }
+
+    context.putImageData(imgData, 0, 0);
+
+    if(name === 'glitch'){
+      applyGlitch(context, w, h);
+    }
+  }
+
+  function applyGlitch(context, w, h){
+    glitchState.t++;
+    const bands = 5 + Math.floor(Math.random()*4);
+    const frame = context.getImageData(0,0,w,h);
+    for(let b=0; b<bands; b++){
+      const y = Math.floor(Math.random()*h);
+      const bandH = 4 + Math.floor(Math.random()*18);
+      const dx = Math.floor((Math.random()-0.5) * w*0.18);
+      const slice = context.getImageData(0, y, w, Math.min(bandH, h-y));
+      context.putImageData(slice, dx, y);
+    }
+    // subtle channel shift stripe
+    const stripeY = Math.floor(Math.random()*h*0.8);
+    const stripeH = 3 + Math.floor(Math.random()*6);
+    if(stripeY+stripeH < h){
+      const d = context.getImageData(0, stripeY, w, stripeH);
+      const dd = d.data;
+      for(let i=0;i<dd.length;i+=4){ dd[i]=clamp(dd[i]+40); dd[i+2]=clamp(dd[i+2]-20); }
+      context.putImageData(d, 0, stripeY);
+    }
+  }
+
+  // ---------- Affine triangle texture mapping ----------
+  function getAffine(s0,s1,s2,d0,d1,d2){
+    const x0=s0.x,y0=s0.y, x1=s1.x,y1=s1.y, x2=s2.x,y2=s2.y;
+    const u0=d0.x,v0=d0.y, u1=d1.x,v1=d1.y, u2=d2.x,v2=d2.y;
+    const denom = x0*(y2-y1) + x1*(y0-y2) + x2*(y1-y0);
+    if(Math.abs(denom) < 1e-6) return null;
+    const a = -(y0*(u2-u1) + y1*(u0-u2) + y2*(u1-u0)) / denom;
+    const b = -(y0*(v2-v1) + y1*(v0-v2) + y2*(v1-v0)) / denom;
+    const c =  (x0*(u2-u1) + x1*(u0-u2) + x2*(u1-u0)) / denom;
+    const d =  (x0*(v2-v1) + x1*(v0-v2) + x2*(v1-v0)) / denom;
+    const e =  (x0*(y2*u1-y1*u2) + x1*(y0*u2-y2*u0) + x2*(y1*u0-y0*u1)) / denom;
+    const f =  (x0*(y2*v1-y1*v2) + x1*(y0*v2-y2*v0) + x2*(y1*v0-y0*v1)) / denom;
+    return [a,b,c,d,e,f];
+  }
+
+  function drawTriangle(context, img, s0,s1,s2, d0,d1,d2){
+    const m = getAffine(s0,s1,s2,d0,d1,d2);
+    if(!m) return;
+    context.save();
+    context.beginPath();
+    context.moveTo(d0.x,d0.y);
+    context.lineTo(d1.x,d1.y);
+    context.lineTo(d2.x,d2.y);
+    context.closePath();
+    context.clip();
+    context.transform(m[0],m[1],m[2],m[3],m[4],m[5]);
+    context.drawImage(img,0,0);
+    context.restore();
+  }
+
+  function drawWarpStrip(context, img, leftPts, rightPts, w, h){
+    const n = leftPts.length;
+    for(let i=0;i<n-1;i++){
+      const sTop = h*(i/(n-1));
+      const sBot = h*((i+1)/(n-1));
+      const sL = {x:0,y:sTop}, sLb={x:0,y:sBot}, sR={x:w,y:sTop}, sRb={x:w,y:sBot};
+      const dLt=leftPts[i], dLb=leftPts[i+1], dRt=rightPts[i], dRb=rightPts[i+1];
+      drawTriangle(context, img, sL, sLb, sRb, dLt, dLb, dRb);
+      drawTriangle(context, img, sL, sRb, sR,  dLt, dRb, dRt);
+    }
+    // outline of the lens for a bit of definition
+    context.save();
+    context.strokeStyle = 'rgba(255,213,74,0.55)';
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(leftPts[0].x, leftPts[0].y);
+    for(let i=1;i<n;i++) context.lineTo(leftPts[i].x, leftPts[i].y);
+    for(let i=n-1;i>=0;i--) context.lineTo(rightPts[i].x, rightPts[i].y);
+    context.closePath();
+    context.stroke();
+    context.restore();
+  }
+
+  // ---------- Hand tracking ----------
+  let latestResults = null;
+  let running = false;
+  let w=960, h=540;
+
+  const pinchState = {}; // per-hand debounce
+  let fistWasActive = false;
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function handSize(hand){
+    return dist(hand[0], hand[9]) || 0.001;
+  }
+
+  function isFist(hand){
+    const size = handSize(hand);
+    const tips = [8,12,16,20];
+    let avg = 0;
+    tips.forEach(i => avg += dist(hand[i], hand[0]));
+    avg /= tips.length;
+    return (avg / size) < 1.15;
+  }
+
+  function detectGestures(hands){
+    // pinch thumb-pinky per hand -> next filter
+    hands.forEach((hand, idx) => {
+      const d = dist(hand[4], hand[20]) / handSize(hand);
+      const pinching = d < 0.35;
+      if(pinching && !pinchState[idx]){
+        cycleFilter(1);
+        pinchState[idx] = true;
+      } else if(!pinching){
+        pinchState[idx] = false;
+      }
+    });
+
+    if(hands.length >= 2){
+      const bothFist = hands.every(isFist);
+      if(bothFist && !fistWasActive){
+        toggleMode();
+      }
+      fistWasActive = bothFist;
+    } else {
+      fistWasActive = false;
+    }
+  }
+
+  function onResults(results){
+    latestResults = results;
+    render();
+  }
+
+  function render(){
+    if(!latestResults) return;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    // base mirrored video
+    ctx.save();
+    ctx.scale(-1,1);
+    ctx.drawImage(video, -w, 0, w, h);
+    ctx.restore();
+
+    // filtered mirrored offscreen texture
+    offCtx.setTransform(1,0,0,1,0,0);
+    offCtx.clearRect(0,0,w,h);
+    const name = FILTERS[filterIdx];
+    offCtx.filter = (name === 'blur') ? 'blur(9px)' : 'none';
+    offCtx.save();
+    offCtx.scale(-1,1);
+    offCtx.drawImage(video, -w, 0, w, h);
+    offCtx.restore();
+    offCtx.filter = 'none';
+    if(name !== 'blur'){
+      applyPixelFilter(offCtx, w, h, name, performance.now()/1000);
+    }
+
+    const lm = latestResults.multiHandLandmarks || [];
+    loadingText.style.display = lm.length >= 2 ? 'none' : 'block';
+
+    if(lm.length >= 2){
+      const withAvg = lm.map(pts => ({pts, avgX: pts.reduce((s,p)=>s+p.x,0)/pts.length}));
+      withAvg.sort((a,b)=>a.avgX-b.avgX);
+      const leftHand = withAvg[0].pts, rightHand = withAvg[1].pts;
+
+      const idxSet = mode === '3D' ? [4,8,12,16,20] : [4,20];
+      const toXY = (p) => ({x:(1-p.x)*w, y:p.y*h});
+      const leftPts = idxSet.map(i => toXY(leftHand[i]));
+      const rightPts = idxSet.map(i => toXY(rightHand[i]));
+
+      drawWarpStrip(ctx, off, leftPts, rightPts, w, h);
+    }
+
+    // hand skeletons
+    if(window.drawConnectors && window.HAND_CONNECTIONS){
+      lm.forEach(hand => {
+        ctx.save();
+        ctx.translate(w,0);
+        ctx.scale(-1,1);
+        window.drawConnectors(ctx, hand, window.HAND_CONNECTIONS, {color:'rgba(255,213,74,0.9)', lineWidth:2});
+        window.drawLandmarks(ctx, hand, {color:'#ffd54a', fillColor:'#ffd54a', lineWidth:1, radius:3});
+        ctx.restore();
+      });
+    }
+
+    detectGestures(lm);
+  }
+
+  async function startCamera(){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video:{ width:{ideal:960}, height:{ideal:540}, facingMode:'user' },
+        audio:false
+      });
+      video.srcObject = stream;
+      await new Promise(res => { video.onloadedmetadata = () => { video.play(); res(); }; });
+
+      w = video.videoWidth || 960;
+      h = video.videoHeight || 540;
+      canvas.width = w; canvas.height = h;
+      off.width = w; off.height = h;
+      canvasWrap.style.setProperty('--ar', `${w}/${h}`);
+
+      startOverlay.style.display = 'none';
+
+      const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.5
+      });
+      hands.onResults(onResults);
+
+      running = true;
+      (async function loop(){
+        if(video.readyState >= 2){
+          await hands.send({image: video});
+        }
+        if(running) requestAnimationFrame(loop);
+      })();
+
+    } catch(err){
+      console.error(err);
+      errBox.style.display = 'block';
+      errBox.textContent = 'No se pudo acceder a la cámara (' + err.message + '). Revisa los permisos del navegador, y si abriste el archivo directamente (file://), prueba servirlo desde un servidor local (http-server / Live Server), ya que muchos navegadores bloquean la cámara en archivos locales.';
+    }
+  }
+
+  startBtn.addEventListener('click', startCamera);
+})();
+</script>
+</body>
+</html>
