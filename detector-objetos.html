@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector inteligente de objetos</title>
+
+    <!-- TensorFlow.js y modelo COCO-SSD -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #ffffff;
+            background:
+                radial-gradient(circle at top left, #263b80, transparent 35%),
+                linear-gradient(135deg, #07111f, #111827 60%, #1e1b4b);
+        }
+
+        header {
+            padding: 25px 18px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: clamp(25px, 5vw, 45px);
+        }
+
+        header p {
+            margin: 0 auto;
+            max-width: 700px;
+            color: #cbd5e1;
+        }
+
+        .panel {
+            width: min(1100px, 94%);
+            margin: auto;
+            padding: 22px;
+            border: 1px solid rgba(255,255,255,.15);
+            border-radius: 22px;
+            background: rgba(15, 23, 42, .78);
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+            backdrop-filter: blur(12px);
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        button,
+        .file-label {
+            border: 0;
+            border-radius: 12px;
+            padding: 13px 18px;
+            color: white;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        button:hover,
+        .file-label:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.15);
+        }
+
+        button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .status {
+            margin: 15px 0;
+            padding: 12px;
+            text-align: center;
+            color: #dbeafe;
+            border-radius: 10px;
+            background: rgba(37, 99, 235, .18);
+        }
+
+        .stage {
+            position: relative;
+            width: 100%;
+            min-height: 300px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: #020617;
+        }
+
+        #image,
+        #video {
+            display: none;
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+
+        #canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .placeholder {
+            padding: 60px 20px;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .results h2 {
+            margin: 0 0 12px;
+            font-size: 21px;
+        }
+
+        #objectList {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px;
+        }
+
+        .object-item {
+            padding: 12px;
+            border-left: 4px solid #22c55e;
+            border-radius: 10px;
+            background: rgba(255,255,255,.08);
+        }
+
+        .object-name {
+            font-weight: bold;
+            text-transform: capitalize;
+        }
+
+        .confidence {
+            margin-top: 5px;
+            color: #a7f3d0;
+            font-size: 14px;
+        }
+
+        .info {
+            margin-top: 18px;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Detector inteligente de objetos</h1>
+        <p>Sube una imagen o activa la cámara para identificar objetos automáticamente.</p>
+    </header>
+
+    <main class="panel">
+        <div class="controls">
+            <label class="file-label" for="fileInput">
+                📁 Seleccionar imagen
+            </label>
+
+            <input id="fileInput" type="file" accept="image/*">
+
+            <button id="cameraButton">
+                📷 Activar cámara
+            </button>
+
+            <button id="stopButton" disabled>
+                ⏹ Detener cámara
+            </button>
+
+            <button id="detectButton" disabled>
+                🔍 Detectar objetos
+            </button>
+        </div>
+
+        <div class="status" id="status">
+            Cargando inteligencia artificial...
+        </div>
+
+        <div class="stage">
+            <div class="placeholder" id="placeholder">
+                Selecciona una imagen o activa la cámara.
+            </div>
+
+            <img id="image" alt="Imagen seleccionada">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <section class="results">
+            <h2>Objetos encontrados</h2>
+            <div id="objectList">
+                <div class="object-item">
+                    Todavía no se ha analizado ninguna imagen.
+                </div>
+            </div>
+        </section>
+
+        <div class="info">
+            Este archivo funciona en el navegador. La primera vez necesita internet
+            para descargar TensorFlow.js y el modelo de reconocimiento.
+        </div>
+    </main>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const cameraButton = document.getElementById("cameraButton");
+        const stopButton = document.getElementById("stopButton");
+        const detectButton = document.getElementById("detectButton");
+        const statusBox = document.getElementById("status");
+        const placeholder = document.getElementById("placeholder");
+        const image = document.getElementById("image");
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const objectList = document.getElementById("objectList");
+
+        let model = null;
+        let cameraStream = null;
+        let selectedImage = false;
+        let detectingCamera = false;
+
+        const nombres = {
+            person: "persona",
+            bicycle: "bicicleta",
+            car: "carro",
+            motorcycle: "motocicleta",
+            airplane: "avión",
+            bus: "autobús",
+            train: "tren",
+            truck: "camión",
+            boat: "barco",
+            traffic_light: "semáforo",
+            fire_hydrant: "hidrante",
+            stop_sign: "señal de alto",
+            parking_meter: "parquímetro",
+            bench: "banca",
+            bird: "pájaro",
+            cat: "gato",
+            dog: "perro",
+            horse: "caballo",
+            sheep: "oveja",
+            cow: "vaca",
+            elephant: "elefante",
+            bear: "oso",
+            zebra: "cebra",
+            giraffe: "jirafa",
+            backpack: "mochila",
+            umbrella: "paraguas",
+            handbag: "bolso",
+            tie: "corbata",
+            suitcase: "maleta",
+            frisbee: "frisbee",
+            skis: "esquís",
+            snowboard: "tabla de snowboard",
+            sports_ball: "pelota deportiva",
+            kite: "cometa",
+            baseball_bat: "bate de béisbol",
+            baseball_glove: "guante de béisbol",
+            skateboard: "patineta",
+            surfboard: "tabla de surf",
+            tennis_racket: "raqueta de tenis",
+            bottle: "botella",
+            wine_glass: "copa de vino",
+            cup: "taza",
+            fork: "tenedor",
+            knife: "cuchillo",
+            spoon: "cuchara",
+            bowl: "tazón",
+            banana: "banano",
+            apple: "manzana",
+            sandwich: "sándwich",
+            orange: "naranja",
+            broccoli: "brócoli",
+            carrot: "zanahoria",
+            hot_dog: "hot dog",
+            pizza: "pizza",
+            donut: "dona",
+            cake: "pastel",
+            chair: "silla",
+            couch: "sofá",
+            potted_plant: "planta en maceta",
+            bed: "cama",
+            dining_table: "mesa de comedor",
+            toilet: "inodoro",
+            tv: "televisor",
+            laptop: "computadora portátil",
+            mouse: "ratón",
+            remote: "control remoto",
+            keyboard: "teclado",
+            cell_phone: "teléfono celular",
+            microwave: "microondas",
+            oven: "horno",
+            toaster: "tostadora",
+            sink: "lavamanos",
+            refrigerator: "refrigeradora",
+            book: "libro",
+            clock: "reloj",
+            vase: "florero",
+            scissors: "tijeras",
+            teddy_bear: "oso de peluche",
+            hair_drier: "secadora",
+            toothbrush: "cepillo de dientes"
+        };
+
+        function traducir(nombre) {
+            return nombres[nombre] || nombre.replaceAll("_", " ");
+        }
+
+        function actualizarEstado(texto) {
+            statusBox.textContent = texto;
+        }
+
+        function limpiarResultados() {
+            objectList.innerHTML = "";
+        }
+
+        function mostrarResultados(predicciones) {
+            limpiarResultados();
+
+            if (!predicciones.length) {
+                objectList.innerHTML = `
+                    <div class="object-item">
+                        No se encontraron objetos con suficiente confianza.
+                    </div>
+                `;
+                return;
+            }
+
+            predicciones.forEach(prediccion => {
+                const porcentaje = Math.round(prediccion.score * 100);
+                const elemento = document.createElement("div");
+
+                elemento.className = "object-item";
+                elemento.innerHTML = `
+                    <div class="object-name">
+                        ${traducir(prediccion.class)}
+                    </div>
+                    <div class="confidence">
+                        Confianza: ${porcentaje}%
+                    </div>
+                `;
+
+                objectList.appendChild(elemento);
+            });
+        }
+
+        function dibujarPredicciones(predicciones, ancho, alto) {
+            canvas.width = ancho;
+            canvas.height = alto;
+
+            ctx.clearRect(0, 0, ancho, alto);
+
+            predicciones.forEach((prediccion, indice) => {
+                const [x, y, w, h] = prediccion.bbox;
+                const color = `hsl(${(indice * 67) % 360}, 90%, 55%)`;
+                const nombre = traducir(prediccion.class);
+                const porcentaje = Math.round(prediccion.score * 100);
+                const texto = `${nombre} ${porcentaje}%`;
+
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, w, h);
+
+                ctx.font = "bold 16px Arial";
+                const anchoTexto = ctx.measureText(texto).width + 16;
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x, Math.max(0, y - 28), anchoTexto, 28);
+
+                ctx.fillStyle = "#000000";
+                ctx.fillText(texto, x + 8, Math.max(19, y - 8));
+            });
+        }
+
+        async function detectarEnImagen() {
+            if (!model || !selectedImage) return;
+
+            actualizarEstado("Analizando imagen...");
+
+            const predicciones = await model.detect(image, 50, 0.35);
+
+            dibujarPredicciones(
+                predicciones,
+                image.naturalWidth,
+                image.naturalHeight
+            );
+
+            mostrarResultados(predicciones);
+            actualizarEstado(`${predicciones.length} objeto(s) detectado(s).`);
+        }
+
+        fileInput.addEventListener("change", event => {
+            const archivo = event.target.files[0];
+
+            if (!archivo) return;
+
+            detenerCamara();
+
+            const url = URL.createObjectURL(archivo);
+
+            image.onload = () => {
+                image.style.display = "block";
+                video.style.display = "none";
+                placeholder.style.display = "none";
+                selectedImage = true;
+                detectButton.disabled = false;
+                actualizarEstado("Imagen cargada. Pulsa “Detectar objetos”.");
+            };
+
+            image.src = url;
+        });
+
+        detectButton.addEventListener("click", detectarEnImagen);
+
+        cameraButton.addEventListener("click", async () => {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+
+                video.srcObject = cameraStream;
+                video.style.display = "block";
+                image.style.display = "none";
+                placeholder.style.display = "none";
+
+                cameraButton.disabled = true;
+                stopButton.disabled = false;
+                detectButton.disabled = true;
+                detectingCamera = true;
+
+                actualizarEstado("Cámara activa. Buscando objetos...");
+                detectarCamara();
+            } catch (error) {
+                actualizarEstado(
+                    "No se pudo abrir la cámara. Revisa los permisos del navegador."
+                );
+            }
+        });
+
+        stopButton.addEventListener("click", detenerCamara);
+
+        function detenerCamara() {
+            detectingCamera = false;
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+
+            video.srcObject = null;
+            video.style.display = "none";
+
+            cameraButton.disabled = false;
+            stopButton.disabled = true;
+
+            if (!selectedImage) {
+                placeholder.style.display = "block";
+                canvas.width = 0;
+                canvas.height = 0;
+                actualizarEstado("Cámara detenida.");
+            }
+        }
+
+        async function detectarCamara() {
+            if (!detectingCamera || !model) return;
+
+            if (video.readyState >= 2) {
+                const predicciones = await model.detect(video, 30, 0.45);
+
+                dibujarPredicciones(
+                    predicciones,
+                    video.videoWidth,
+                    video.videoHeight
+                );
+
+                mostrarResultados(predicciones);
+                actualizarEstado(
+                    `${predicciones.length} objeto(s) detectado(s) en tiempo real.`
+                );
+            }
+
+            requestAnimationFrame(detectarCamara);
+        }
+
+        async function cargarModelo() {
+            try {
+                model = await cocoSsd.load({
+                    base: "lite_mobilenet_v2"
+                });
+
+                actualizarEstado(
+                    "Modelo listo. Puedes subir una imagen o activar la cámara."
+                );
+            } catch (error) {
+                actualizarEstado(
+                    "No se pudo cargar el modelo. Comprueba tu conexión a internet."
+                );
+                console.error(error);
+            }
+        }
+
+        cargarModelo();
+    </script>
+</body>
+</html>
