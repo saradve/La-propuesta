@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>reloj</title>
+<style>
+:root{--bg:#f0ece2;--fg:#1a1a1a;--k:#1a1a1a;--kf:#f0ece2;--a:#e8412c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15151a;--fg:#eee;--k:#2b2b36;--kf:#f4f4f4;--a:#ff6b4a}}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:'Arial Narrow',Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:16px}
+.cl{display:flex;gap:6px;perspective:600px;align-items:center}
+.d{width:clamp(40px,14vw,80px);height:clamp(60px,21vw,120px);background:var(--k);color:var(--kf);border-radius:10px;display:grid;place-items:center;font-size:clamp(2.4rem,11vw,5.6rem);font-weight:700;position:relative;box-shadow:0 8px 0 #0003;font-variant-numeric:tabular-nums}
+.d::after{content:'';position:absolute;left:0;right:0;top:50%;height:2px;background:#0007}
+.d.fl{animation:fl .45s ease-out}@keyframes fl{from{transform:rotateX(-90deg)}to{transform:none}}
+.s{font-size:clamp(2rem,9vw,4rem);font-weight:700;color:var(--a);padding:0 2px}
+#dt{font-size:1.1rem}
+.n{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:420px}
+button{font:inherit;color:var(--fg);background:transparent;border:2px solid var(--fg);border-radius:8px;padding:8px 14px;cursor:pointer}
+button.on{background:var(--fg);color:var(--bg)}button:focus-visible{outline:3px solid var(--a);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.d.fl{animation:none}}
+</style></head><body>
+<div id="dt"></div><div class="cl" id="cl" aria-label="Hora"></div>
+<div class="n" id="n"></div>
+<script>
+const Z=[['Perú','America/Lima'],['Mi hora',undefined],['Ciudad de México','America/Mexico_City'],['Madrid','Europe/Madrid'],['Buenos Aires','America/Argentina/Buenos_Aires'],['Tokio','Asia/Tokyo'],['Nueva York','America/New_York']];let z=Z[0][1],last='';
+const cl=document.getElementById('cl');
+for(let i=0;i<8;i++){const e=document.createElement('div');e.className=i%3==2?'s':'d';if(i%3==2)e.textContent=':';cl.append(e)}
+function tick(){const d=new Date(),o={timeZone:z,hour12:false};const p=new Intl.DateTimeFormat('en-GB',{...o,hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(d);
+const c=[...cl.children];const ch=[p[0],p[1],':',p[3],p[4],':',p[6],p[7]];ch.forEach((x,i)=>{if(i%3==2)return;if(c[i].textContent!=x){c[i].textContent=x;c[i].classList.remove('fl');void c[i].offsetWidth;c[i].classList.add('fl')}});
+document.getElementById('dt').textContent=new Intl.DateTimeFormat('es',{timeZone:z,weekday:'long',day:'numeric',month:'long'}).format(d)}
+const n=document.getElementById('n');Z.forEach((x,i)=>{const b=document.createElement('button');b.textContent=x[0];if(!i)b.className='on';b.onclick=()=>{z=x[1];[...n.children].forEach(y=>y.classList.remove('on'));b.classList.add('on');tick()};n.append(b)});
+tick();setInterval(tick,500)
+</script></body></html>
