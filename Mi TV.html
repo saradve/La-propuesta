@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi TV</title>
+<style>
+:root{--bg:#f1ece4;--fg:#222;--tv:#3b2a1d;--tv2:#5a4230;--btn:#e6dccd;--acc:#e4572e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15110d;--fg:#eee;--tv:#6b4e36;--tv2:#8a6a4e;--btn:#2a221a;--acc:#ff7a4d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;padding:14px}
+h1{font-size:1.2rem;margin:4px 0 12px}
+.tv{width:100%;max-width:640px;background:linear-gradient(var(--tv2),var(--tv));border-radius:22px;padding:16px 16px 12px;box-shadow:0 10px 30px #0006}
+.screen{position:relative;aspect-ratio:4/3;border-radius:18px;overflow:hidden;background:#000;border:6px solid #111}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px;color:#fff;gap:8px}
+.card .n{position:absolute;top:10px;right:14px;font:700 1.6rem monospace;color:#7CFC00;text-shadow:0 0 6px #000}
+.card .e{font-size:3.2rem}
+.card h2{margin:0;font-size:1.5rem}
+.card p{margin:0;font-size:.9rem;opacity:.9;max-width:90%}
+.card a{margin-top:6px;background:var(--acc);color:#fff;text-decoration:none;padding:10px 18px;border-radius:999px;font-weight:700}
+.bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
+button{background:var(--btn);color:var(--fg);border:0;border-radius:10px;padding:10px 14px;font-size:.95rem;cursor:pointer}
+button.on{background:var(--acc);color:#fff}
+.list{width:100%;max-width:640px;margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.list button{display:flex;gap:6px;align-items:center;text-align:left;padding:10px}
+.note{max-width:640px;font-size:.8rem;opacity:.75;margin-top:14px;text-align:center}
+</style>
+</head>
+<body>
+<h1>📺 Mi TV</h1>
+<div class="tv">
+  <div class="screen"><canvas id="c"></canvas><div class="card" id="card"></div></div>
+  <div class="bar">
+    <button onclick="step(-1)">⏮ CH−</button>
+    <button onclick="step(1)">CH+ ⏭</button>
+    <button onclick="rnd()">🎲 Sorpresa</button>
+  </div>
+  <div class="bar" id="tabs"></div>
+</div>
+<div class="list" id="list"></div>
+<p class="note">Aquí están los servicios gratuitos y legales. Cada canal se abre en una pestaña nueva porque estos servicios no permiten incrustarse en otra página.</p>
+<script>
+var C=[
+{c:"Canales",e:"📡",n:"Pluto TV",d:"Cientos de canales en vivo gratis, en español.",u:"https://pluto.tv/latam/live-tv",k:"#1d3557"},
+{c:"Canales",e:"🇪🇸",n:"RTVE Play",d:"La 1, La 2, Clan y más en directo.",u:"https://www.rtve.es/play/",k:"#8d0801"},
+{c:"Canales",e:"📰",n:"Noticias 24",d:"Canales de noticias internacionales en directo en YouTube.",u:"https://www.youtube.com/results?search_query=noticias+en+vivo&sp=EgJAAQ%253D%253D",k:"#2b2d42"},
+{c:"Canales",e:"🎵",n:"Música en vivo",d:"Radios y conciertos 24/7.",u:"https://www.youtube.com/results?search_query=musica+en+vivo+24%2F7&sp=EgJAAQ%253D%253D",k:"#6a0572"},
+{c:"Canales",e:"🧸",n:"Canal Clan",d:"Dibujos y series infantiles.",u:"https://www.rtve.es/play/clan/",k:"#f77f00"},
+{c:"Novelas",e:"💔",n:"Vix",d:"Novelas y series gratis con anuncios.",u:"https://vix.com",k:"#d00000"},
+{c:"Novelas",e:"🌹",n:"Telemundo",d:"Novelas y capítulos completos.",u:"https://www.telemundo.com/novelas",k:"#9d0208"},
+{c:"Novelas",e:"💃",n:"Novelas en YouTube",d:"Capítulos completos subidos por canales oficiales.",u:"https://www.youtube.com/results?search_query=novela+capitulo+completo+oficial",k:"#5f0f40"},
+{c:"Novelas",e:"📖",n:"Las Estrellas",d:"Contenido de Televisa en Vix.",u:"https://vix.com/es-es/las-estrellas",k:"#7b2cbf"},
+{c:"Películas",e:"🎬",n:"Tubi",d:"Miles de películas gratis.",u:"https://tubitv.com/category/spanish_language",k:"#3a0ca3"},
+{c:"Películas",e:"🍿",n:"Pluto Cine",d:"Películas a la carta gratis.",u:"https://pluto.tv/latam/on-demand",k:"#1b4332"},
+{c:"Películas",e:"▶️",n:"YouTube Películas",d:"Películas gratis con anuncios.",u:"https://www.youtube.com/feed/storefront",k:"#c1121f"},
+{c:"Películas",e:"🎞️",n:"Cine clásico",d:"Cine de dominio público en Internet Archive.",u:"https://archive.org/details/moviesandfilms",k:"#403d39"}
+];
+var cur=0,tab="Todos",cv=document.getElementById("c"),x=cv.getContext("2d"),noise=0;
+function fit(){cv.width=160;cv.height=120}fit();
+function stat(){var i=x.createImageData(160,120),d=i.data;for(var p=0;p<d.length;p+=4){var v=Math.random()*255;d[p]=d[p+1]=d[p+2]=v;d[p+3]=255}x.putImageData(i,0,0)}
+function show(i){cur=i;var ch=C[i],cd=document.getElementById("card");cd.style.display="none";var t=0;
+ clearInterval(noise);noise=setInterval(function(){stat();if(++t>8){clearInterval(noise);cd.style.display="flex";cd.style.background="linear-gradient(135deg,"+ch.k+",#000)";
+ cd.innerHTML='<div class="n">'+String(i+1).padStart(2,"0")+'</div><div class="e">'+ch.e+'</div><h2>'+ch.n+'</h2><p>'+ch.d+'</p><a href="'+ch.u+'" target="_blank" rel="noopener">▶ Ver ahora</a>'}},60);}
+function step(n){show((cur+n+C.length)%C.length)}
+function rnd(){show(Math.floor(Math.random()*C.length))}
+function draw(){var T=["Todos","Canales","Novelas","Películas"];
+ document.getElementById("tabs").innerHTML=T.map(function(t){return '<button class="'+(t==tab?"on":"")+'" onclick="tab=\''+t+'\';draw()">'+t+'</button>'}).join("");
+ document.getElementById("list").innerHTML=C.map(function(c,i){return (tab=="Todos"||c.c==tab)?'<button onclick="show('+i+')">'+c.e+' '+c.n+'</button>':""}).join("")}
+document.addEventListener("keydown",function(e){if(e.key=="ArrowRight"||e.key=="ArrowUp")step(1);if(e.key=="ArrowLeft"||e.key=="ArrowDown")step(-1)});
+draw();show(0);
+</script>
+</body>
+</html>
